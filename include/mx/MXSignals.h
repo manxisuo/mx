@@ -7,7 +7,8 @@
 #include <utility>
 
 // ---------- 内部：类型工具 ----------
-namespace mx_detail {
+namespace mx {
+namespace detail {
 
 // 如果信号无参 → void；1 参 → 该类型（值类型）；多参 → tuple<值类型...>
 template <typename... Args>
@@ -27,7 +28,7 @@ struct DefaultResult {
 template <typename F, typename... Args>
 using invoke_result_t = std::invoke_result_t<F, Args...>;
 
-} // namespace mx_detail
+} // namespace detail
 
 // -------------------------------------------------------------
 // 1) 无 transform 版本：结果 = 默认策略（void / 单参值 / tuple<值...>）
@@ -39,9 +40,9 @@ auto whenSignal(
     QObject* context = nullptr,
     int timeoutMs = -1,                             // <0 不超时
     Qt::ConnectionType ctype = Qt::AutoConnection
-    ) -> QFuture<typename mx_detail::DefaultResult<SigArgs...>::type>
+    ) -> QFuture<typename detail::DefaultResult<SigArgs...>::type>
 {
-    using R = typename mx_detail::DefaultResult<SigArgs...>::type;
+    using R = typename detail::DefaultResult<SigArgs...>::type;
 
     auto state = std::make_shared<QFutureInterface<R>>();
     state->reportStarted();
@@ -145,9 +146,9 @@ auto whenSignalT(
     Transform transform,                            // (SigArgs...) -> R
     int timeoutMs = -1,
     Qt::ConnectionType ctype = Qt::AutoConnection
-    ) -> QFuture<mx_detail::invoke_result_t<Transform, SigArgs...>>
+    ) -> QFuture<detail::invoke_result_t<Transform, SigArgs...>>
 {
-    using R = mx_detail::invoke_result_t<Transform, SigArgs...>;
+    using R = detail::invoke_result_t<Transform, SigArgs...>;
 
     auto state = std::make_shared<QFutureInterface<R>>();
     state->reportStarted();
@@ -226,5 +227,7 @@ auto whenSignalT(
 
     return fut;
 }
+
+} // namespace mx
 
 

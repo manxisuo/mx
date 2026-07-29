@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 
-namespace TQ {
+namespace mx {
 namespace detail {
     inline bool isLittleEndian()
     {

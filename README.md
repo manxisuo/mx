@@ -86,8 +86,8 @@ struct Packet
     MX_BYTEODER(Packet, sequence, items)
 };
 
-Packet net = MX::ByteOrder::toNetOrder(packet);
-Packet host = MX::ByteOrder::toHostOrder(net);
+Packet net = mx::toNetOrder(packet);
+Packet host = mx::toHostOrder(net);
 ```
 
 `MX_BYTEODER` 通过 `asTuple()` 暴露字段顺序。数值与枚举字段会递归转换。嵌套结构体、C 数组、`QList<T>` 和 `QVector<T>` 在其元素类型同样受支持时均可使用。像 `QString` 这类与字节序无关的字段会保持不变。
@@ -110,8 +110,8 @@ struct Course
     MX_FIELDS(id, name, studentIds)
 };
 
-QByteArray bytes = MX::toByteArray(course);
-Course decoded = MX::fromByteArray<Course>(bytes);
+QByteArray bytes = mx::toByteArray(course);
+Course decoded = mx::fromByteArray<Course>(bytes);
 ```
 
 ## 构建示例与测试

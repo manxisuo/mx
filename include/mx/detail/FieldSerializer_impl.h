@@ -20,7 +20,7 @@
 #include <QList>
 #include <QVector>
 
-namespace MX {
+namespace mx {
 
 // ---------- 辅助 trait：判断是否为 QList<T> 或 QVector<T> ----------
 template<typename T>
@@ -411,5 +411,5 @@ fromByteArraySafe(const QByteArray &ba) {
     }
 }
 
-} // namespace MX
+} // namespace mx
 

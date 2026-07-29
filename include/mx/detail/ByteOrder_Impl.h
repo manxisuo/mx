@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <cstring> // memcpy
 
-namespace MX::ByteOrder
+namespace mx
 {
 template<typename T>
 void convertNetOrder(T& v);

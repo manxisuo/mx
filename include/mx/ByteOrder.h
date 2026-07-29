@@ -13,7 +13,7 @@ auto asTuple() const { \
     return std::tie(__VA_ARGS__); \
 }
 
-namespace MX::ByteOrder
+namespace mx
 {
     // 将结构体从主机字节序转换为网络字节序
     template<typename T>

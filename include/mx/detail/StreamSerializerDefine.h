@@ -3,7 +3,7 @@
 #include <QDataStream>
 #include <optional>
 
-namespace MX::StreamSerializer
+namespace mx
 {
     // 写入所有字段（C++17 fold expression）
     template<typename T, typename... M>
@@ -26,9 +26,9 @@ namespace MX::StreamSerializer
 #define MX_SERIALIZABLE(Type, ...)                                \
 inline QDataStream& operator<<(QDataStream& out, const Type& obj) \
 {                                                                 \
-    return MX::StreamSerializer::writeAll(out, obj, __VA_ARGS__);    \
+    return mx::writeAll(out, obj, __VA_ARGS__);    \
 }                                                                 \
 inline QDataStream& operator>>(QDataStream& in, Type& obj)        \
 {                                                                 \
-    return MX::StreamSerializer::readAll(in, obj, __VA_ARGS__);      \
+    return mx::readAll(in, obj, __VA_ARGS__);      \
 }

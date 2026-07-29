@@ -39,8 +39,8 @@ int main()
     value.leafArray[0] = value.leaf;
     value.leafArray[1].id = 0x5678;
 
-    const Branch net = MX::ByteOrder::toNetOrder(value);
-    const Branch host = MX::ByteOrder::toHostOrder(net);
+    const Branch net = mx::toNetOrder(value);
+    const Branch host = mx::toHostOrder(net);
 
     if (host.count != value.count) return 1;
     if (host.leaf.id != value.leaf.id) return 2;
@@ -50,13 +50,13 @@ int main()
     if (host.vectorLeaves.size() != value.vectorLeaves.size()) return 6;
     if (host.leafArray[1].id != value.leafArray[1].id) return 7;
 
-    const QByteArray bytes = MX::toByteArray(value);
-    const Branch decoded = MX::fromByteArray<Branch>(bytes);
+    const QByteArray bytes = mx::toByteArray(value);
+    const Branch decoded = mx::fromByteArray<Branch>(bytes);
     if (decoded.count != value.count) return 8;
     if (decoded.leaves[0].name != value.leaves[0].name) return 9;
 
-    if (TQ::BCD2Dec(static_cast<uint16_t>(0x1234)) != 1234) return 10;
-    if (TQ::Dec2BCD(1234) != 0x1234) return 11;
+    if (mx::BCD2Dec(static_cast<uint16_t>(0x1234)) != 1234) return 10;
+    if (mx::Dec2BCD(1234) != 0x1234) return 11;
 
     return 0;
 }

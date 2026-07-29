@@ -6,7 +6,7 @@
 #include <type_traits>
 #include "mx/detail/StreamSerializerDefine.h"
 
-namespace MX::StreamSerializer
+namespace mx
 {
     // 默认使用 Qt 最新的 QDataStream 版本
     inline constexpr QDataStream::Version StreamVersion = QDataStream::Qt_5_12;
@@ -34,7 +34,7 @@ namespace MX::StreamSerializer
 
     // 将对象序列化为字节数组
     template<typename T>
-    QByteArray serialize(const T& object, QDataStream::ByteOrder order = QDataStream::BigEndian)
+    QByteArray streamSerialize(const T& object, QDataStream::ByteOrder order = QDataStream::BigEndian)
     {
         QByteArray buffer;
         QDataStream stream(&buffer, QIODevice::WriteOnly);
@@ -46,7 +46,7 @@ namespace MX::StreamSerializer
 
     // 从字节数组反序列化对象
     template<typename T>
-    T deserialize(const QByteArray& buffer, QDataStream::ByteOrder order = QDataStream::BigEndian)
+    T streamDeserialize(const QByteArray& buffer, QDataStream::ByteOrder order = QDataStream::BigEndian)
     {
         T object;
         QDataStream stream(buffer);
@@ -59,7 +59,7 @@ namespace MX::StreamSerializer
 
     // 从字节数组反序列化对象（安全版）
     template<typename T>
-    std::optional<T> deserializeSafe(const QByteArray& buffer, QDataStream::ByteOrder order = QDataStream::BigEndian)
+    std::optional<T> streamDeserializeSafe(const QByteArray& buffer, QDataStream::ByteOrder order = QDataStream::BigEndian)
     {
         T object;
         QDataStream stream(buffer);

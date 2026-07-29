@@ -39,7 +39,7 @@
 #include <utility>
 #include <optional>
 
-namespace MX {
+namespace mx {
 // 对外接口（实现位于 FieldSerializer_impl.h）
 
 // 检查类型是否有 serializeFields 方法（用于 SFINAE）
@@ -87,7 +87,7 @@ fromByteArraySafe(const QByteArray &ba);
 
 // 注意具体的 serialize/deserialize / serializeWithLength / deserializeWithLength
 // 的实现应该放在 FieldSerializer_impl.h 中（与本头文件配套使用）。
-} // namespace MX
+} // namespace mx
 
 // --------------------------- 宏定义 ---------------------------
 
@@ -99,19 +99,19 @@ fromByteArraySafe(const QByteArray &ba);
 //   - MX_FIELD(name, 整数)              : 固定大小字符串（如 10 表示 10 字节），仅对 QString 有效
 // 注意：整数参数仅对 QString 类型有效，其他类型会使用默认序列化
 // 注意：指定长度类型请使用 MX_FIELD_TYPE(name, LenType)，而不是 MX_FIELD(name, LenType)
-#define MX_FIELD_1(NAME)            MX::serialize(ba, NAME)
-#define MX_FIELD_2(NAME, ARG)       MX::_mx_field_helper_impl(ba, NAME, std::integral_constant<int, ARG>{})
+#define MX_FIELD_1(NAME)            mx::serialize(ba, NAME)
+#define MX_FIELD_2(NAME, ARG)       mx::_mx_field_helper_impl(ba, NAME, std::integral_constant<int, ARG>{})
 #define MX_FIELD(...)               MX_PP_GET_MACRO(__VA_ARGS__, MX_FIELD_2, MX_FIELD_1)(__VA_ARGS__)
 
 // 类型参数专用宏（用于指定长度类型，更简洁的语法）
-#define MX_FIELD_TYPE(NAME, LENTYPE) MX::serializeWithLength<LENTYPE>(ba, NAME)
-#define MX_FIELD_FROM_TYPE(NAME, LENTYPE) MX::deserializeWithLength<LENTYPE>(ba, offset, NAME)
+#define MX_FIELD_TYPE(NAME, LENTYPE) mx::serializeWithLength<LENTYPE>(ba, NAME)
+#define MX_FIELD_FROM_TYPE(NAME, LENTYPE) mx::deserializeWithLength<LENTYPE>(ba, offset, NAME)
 
 // 单字段反序列化宏
-#define MX_FIELD_FROM_1(NAME)       MX::deserialize(ba, offset, NAME)
+#define MX_FIELD_FROM_1(NAME)       mx::deserialize(ba, offset, NAME)
 // 对于整数参数：使用 std::integral_constant 将整数字面量转换为编译时常量
 // 对于类型参数：直接展开为 deserializeWithLength<Type>（通过宏生成模板语法）
-#define MX_FIELD_FROM_2(NAME, ARG)  MX::_mx_field_from_helper_impl(ba, offset, NAME, std::integral_constant<int, ARG>{})
+#define MX_FIELD_FROM_2(NAME, ARG)  mx::_mx_field_from_helper_impl(ba, offset, NAME, std::integral_constant<int, ARG>{})
 #define MX_FIELD_FROM(...)          MX_PP_GET_MACRO(__VA_ARGS__, MX_FIELD_FROM_2, MX_FIELD_FROM_1)(__VA_ARGS__)
 
 // 方法头宏（无括号，像函数定义）
@@ -128,12 +128,12 @@ fromByteArraySafe(const QByteArray &ba);
 void serializeFields(QByteArray &ba) const { \
         /* 使用 tie + apply + 折叠表达式对任意数量字段进行序列化（避免悬垂引用） */ \
         auto tpl = std::tie(__VA_ARGS__); \
-        std::apply([&](auto&... args){ ( (MX::serialize(ba, args)), ... ); }, tpl); \
+        std::apply([&](auto&... args){ ( (mx::serialize(ba, args)), ... ); }, tpl); \
 } \
     void deserializeFields(const QByteArray &ba, int &offset) { \
         /* 对任意数量字段进行反序列化 */ \
         auto tpl = std::tie(__VA_ARGS__); \
-        std::apply([&](auto&... args){ ( (MX::deserialize(ba, offset, args)), ... ); }, tpl); \
+        std::apply([&](auto&... args){ ( (mx::deserialize(ba, offset, args)), ... ); }, tpl); \
 }
 
 // --------------------------- 包含实现 ---------------------------
