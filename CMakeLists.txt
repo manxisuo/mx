@@ -18,7 +18,10 @@ target_include_directories(mx
 
 find_package(Qt5 COMPONENTS Core REQUIRED)
 target_link_libraries(mx INTERFACE Qt5::Core)
-target_compile_options(mx INTERFACE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+target_compile_options(mx INTERFACE
+    $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
+    $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
+)
 
 option(MX_BUILD_EXAMPLES "Build mx examples" OFF)
 option(MX_BUILD_TESTS "Build mx tests" OFF)

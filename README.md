@@ -5,7 +5,8 @@
 - 反射结构体的字节序转换；
 - 字段序列化 / 反序列化到 `QByteArray`；
 - 基于 `QDataStream` 的序列化辅助；
-- 字节转换与 BCD 转换辅助。
+- 字节转换与 BCD 转换辅助；
+- 位域结构体的跨平台安全打包（`MX_BITFIELDS_U8` / `MX_BITFIELDS_U16`）。
 
 库支持常见的 Qt 类型，例如 `QString`、`QList` 和 `QVector`。
 
@@ -25,6 +26,7 @@ mx/
 │     ├─ MXSignals.h
 │     ├─ bytes_convert.h
 │     └─ detail/
+│        ├─ BitFields_Impl.h
 │        ├─ ByteOrder_Impl.h
 │        ├─ FieldSerializer_impl.h
 │        └─ StreamSerializerDefine.h
@@ -39,7 +41,7 @@ mx/
 - C++17
 - Qt 5 Core 模块
 
-当前 CMake 目标使用 `Qt5::Core`。
+当前 CMake 目标使用 `Qt5::Core`。在 MSVC 下还会自动启用 `/utf-8` 与 `/Zc:preprocessor`（后者为位域宏正确展开所必需）。
 
 ## CMake 用法
 
@@ -113,6 +115,45 @@ struct Course
 QByteArray bytes = mx::toByteArray(course);
 Course decoded = mx::fromByteArray<Course>(bytes);
 ```
+
+## 位域示例
+
+C++ 位域的内存布局是实现定义的，不能直接 `memcpy` 做跨平台协议。用 `MX_BITFIELDS_U8` / `MX_BITFIELDS_U16` 按字段顺序显式打包：
+
+- 第 0 个参数 → bit0
+- 第 1 个参数 → bit1
+- ……
+
+```cpp
+#include <mx/FieldSerializer.h>
+#include <mx/ByteOrder.h>
+
+struct AState
+{
+    unsigned char b0:1;
+    unsigned char b1:1;
+    unsigned char b2:1;
+    unsigned char b3:1;
+    unsigned char b4:1;
+    unsigned char b5:1;
+    unsigned char b6:1;
+    unsigned char b7:1;
+
+    MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
+};
+
+struct Device
+{
+    QString name;
+    QList<int> nums;
+    AState state;
+
+    MX_FIELDS(name, nums, state)
+    MX_BYTEODER(Device, name, nums, state)
+};
+```
+
+不要对 `b0`…`b7` 使用 `MX_FIELDS` / `MX_BYTEODER`。`U8` 无字节序问题；`U16` 在 `toNetOrder` / `toHostOrder` 时会对打包后的 `uint16_t` 做端序转换。
 
 ## 构建示例与测试
 

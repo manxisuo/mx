@@ -1,0 +1,63 @@
+# Build
+/build/
+/out/
+/cmake-build-*/
+/Debug/
+/Release/
+/RelWithDebInfo/
+/MinSizeRel/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+Testing/
+compile_commands.json
+CMakeSettings.json
+CMakeUserPresets.json
+
+# Visual Studio / MSVC
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
+*.ipch
+*.pdb
+*.ilk
+*.idb
+*.obj
+*.o
+*.exp
+*.lib
+*.dll
+*.exe
+*.aps
+
+# Qt
+*.qmlc
+*.jsc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*_plugin_import.cpp
+
+# Editors / OS
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Misc
+*.log
+*.tmp
+*.orig
+*.bak

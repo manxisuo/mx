@@ -19,25 +19,9 @@
 #include <QString>
 #include <QList>
 #include <QVector>
+#include "mx/detail/QtContainerTraits.h"
 
 namespace mx {
-
-// ---------- 辅助 trait：判断是否为 QList<T> 或 QVector<T> ----------
-template<typename T>
-struct is_q_list : std::false_type {};
-
-template<typename U>
-struct is_q_list<QList<U>> : std::true_type {
-    using value_type = U;
-};
-
-template<typename T>
-struct is_q_vector : std::false_type {};
-
-template<typename U>
-struct is_q_vector<QVector<U>> : std::true_type {
-    using value_type = U;
-};
 
 // ---------- 通用长度读写（LenT 必须为整型） ----------
 // writeLength 与 readLength 以原始 bytes 写入/读取 LenT 大小的整数（宿主字节序）。
@@ -208,28 +192,12 @@ auto _mx_field_from_helper_impl(const QByteArray &ba, int &offset, T &value, Arg
     deserialize(ba, offset, value);
 }
 
-// ---------- POD（trivially copyable） ----------
-// 对于可平凡复制的类型直接 memcpy 到字节数组中（注意字节序问题：当前为宿主字节序）
-template<typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
-void serialize(QByteArray &ba, const T &value) {
-    ba.append(reinterpret_cast<const char*>(&value), static_cast<int>(sizeof(T)));
-}
-
-template<typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
-void deserialize(const QByteArray &ba, int &offset, T &value) {
-    int remaining = ba.size() - offset;
-    if (remaining < 0 || static_cast<int>(sizeof(T)) > remaining) {
-        throw std::runtime_error("POD deserialize: buffer underflow");
-    }
-    std::memcpy(&value, ba.constData() + offset, sizeof(T));
-    offset += static_cast<int>(sizeof(T));
-}
-
-// ---------- 用户自定义类型（非 POD、非 QString、非 QList、非 QVector） ----------
-// 期望用户在类型内部提供 serializeFields(QByteArray&) const 与 deserializeFields(const QByteArray&, int&)
+// ---------- 优先：带 serializeFields / deserializeFields 的自定义类型 ----------
+// 即使类型是 trivially copyable（例如仅含位域的结构体），也走显式字段协议，
+// 避免依赖编译器内存布局，保证跨平台一致。
 template<typename T>
 std::enable_if_t<
-    !std::is_trivially_copyable_v<T> &&
+    has_serializeFields<T>::value &&
         !std::is_same_v<T, QString> &&
         !is_q_list<T>::value &&
         !is_q_vector<T>::value,
@@ -240,13 +208,44 @@ serialize(QByteArray &ba, const T &value) {
 
 template<typename T>
 std::enable_if_t<
-    !std::is_trivially_copyable_v<T> &&
+    has_deserializeFields<T>::value &&
         !std::is_same_v<T, QString> &&
         !is_q_list<T>::value &&
         !is_q_vector<T>::value,
     void>
 deserialize(const QByteArray &ba, int &offset, T &value) {
     value.deserializeFields(ba, offset);
+}
+
+// ---------- POD（trivially copyable，且未提供 serializeFields） ----------
+// 对于可平凡复制的类型直接 memcpy 到字节数组中（注意字节序问题：当前为宿主字节序）
+template<typename T>
+std::enable_if_t<
+    !has_serializeFields<T>::value &&
+        std::is_trivially_copyable_v<T> &&
+        !std::is_same_v<T, QString> &&
+        !is_q_list<T>::value &&
+        !is_q_vector<T>::value,
+    void>
+serialize(QByteArray &ba, const T &value) {
+    ba.append(reinterpret_cast<const char*>(&value), static_cast<int>(sizeof(T)));
+}
+
+template<typename T>
+std::enable_if_t<
+    !has_deserializeFields<T>::value &&
+        std::is_trivially_copyable_v<T> &&
+        !std::is_same_v<T, QString> &&
+        !is_q_list<T>::value &&
+        !is_q_vector<T>::value,
+    void>
+deserialize(const QByteArray &ba, int &offset, T &value) {
+    int remaining = ba.size() - offset;
+    if (remaining < 0 || static_cast<int>(sizeof(T)) > remaining) {
+        throw std::runtime_error("POD deserialize: buffer underflow");
+    }
+    std::memcpy(&value, ba.constData() + offset, sizeof(T));
+    offset += static_cast<int>(sizeof(T));
 }
 
 // ---------- QList<T> 默认实现（使用 uint32_t 记录长度） ----------

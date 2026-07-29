@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstring> // memcpy
+#include "mx/detail/QtContainerTraits.h"
 
 namespace mx
 {
@@ -36,17 +37,17 @@ struct has_asTuple : std::false_type {};
 template<typename T>
 struct has_asTuple<T, std::void_t<decltype(std::declval<T&>().asTuple())>> : std::true_type {};
 
-template<typename T>
-struct is_q_list : std::false_type {};
+template<typename T, typename = void>
+struct has_mx_bitfields_convert : std::false_type {};
 
 template<typename T>
-struct is_q_list<QList<T>> : std::true_type {};
-
-template<typename T>
-struct is_q_vector : std::false_type {};
-
-template<typename T>
-struct is_q_vector<QVector<T>> : std::true_type {};
+struct has_mx_bitfields_convert<
+    T,
+    std::void_t<
+        decltype(std::declval<T&>().mx_to_net_bitfields()),
+        decltype(std::declval<T&>().mx_to_host_bitfields())
+    >
+> : std::true_type {};
 
 // ====================================================
 // 单值字节序转换（整数 + 浮点数）
@@ -166,6 +167,9 @@ void convertNetOrder(T& v) {
     if constexpr (has_asTuple<T>::value) {
         v = toNetOrderStruct(v);
     }
+    else if constexpr (has_mx_bitfields_convert<T>::value) {
+        v.mx_to_net_bitfields();
+    }
     else if constexpr (is_q_list<T>::value || is_q_vector<T>::value) {
         for (auto& elem : v) {
             convertNetOrder(elem);
@@ -185,6 +189,9 @@ template<typename T>
 void convertHostOrder(T& v) {
     if constexpr (has_asTuple<T>::value) {
         v = toHostOrderStruct(v);
+    }
+    else if constexpr (has_mx_bitfields_convert<T>::value) {
+        v.mx_to_host_bitfields();
     }
     else if constexpr (is_q_list<T>::value || is_q_vector<T>::value) {
         for (auto& elem : v) {

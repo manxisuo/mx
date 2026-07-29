@@ -7,6 +7,8 @@
 //  - MX_FIELDS(...) 只接受字段名列表（例如：MX_FIELDS(id, name, bookIdList)）。
 //    若某字段需要自定义长度类型（例如 name 的长度用 uint32_t），请使用 MX_FIELD(name, uint32_t) 和 MX_FIELD_FROM(name, uint32_t)
 //    或不将该字段放入 MX_FIELDS 中，手动编写序列化/反序列化逻辑。
+//  - MX_BITFIELDS_U8 / MX_BITFIELDS_U16：将 C++ 位域按参数顺序显式打包为整数后再序列化，
+//    不依赖编译器位域内存布局，可用于跨平台协议。
 //
 // 用法示例：
 // struct Course {
@@ -33,6 +35,7 @@
 #include <QString>
 #include <QList>
 #include <QVector>
+#include <QtEndian>
 #include <type_traits>
 #include <cstdint>
 #include <tuple>
@@ -135,6 +138,60 @@ void serializeFields(QByteArray &ba) const { \
         auto tpl = std::tie(__VA_ARGS__); \
         std::apply([&](auto&... args){ ( (mx::deserialize(ba, offset, args)), ... ); }, tpl); \
 }
+
+// --------------------------- MX_BITFIELDS（跨平台安全位域打包） ---------------------------
+// 将 C++ 位域按参数顺序显式打包为整数后再序列化，不依赖编译器位域内存布局。
+// 约定：第 0 个字段 → bit0，第 1 个 → bit1，以此类推。
+// 用法（写在位域结构体内部，不要对各位使用 MX_FIELDS / MX_BYTEODER）：
+//   struct AState {
+//       unsigned char b0:1, b1:1, b2:1, b3:1, b4:1, b5:1, b6:1, b7:1;
+//       MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
+//   };
+#include "mx/detail/BitFields_Impl.h"
+
+#define MX_BITFIELDS_U8(...) \
+    uint8_t mx_pack_bits() const { \
+        return ::mx::detail::packBitsU8(__VA_ARGS__); \
+    } \
+    void mx_unpack_bits(uint8_t packed) { \
+        MX_BF_UNPACK(packed, __VA_ARGS__); \
+    } \
+    void mx_to_net_bitfields() {} \
+    void mx_to_host_bitfields() {} \
+    void serializeFields(QByteArray &ba) const { \
+        ::mx::serialize(ba, mx_pack_bits()); \
+    } \
+    void deserializeFields(const QByteArray &ba, int &offset) { \
+        uint8_t packed{}; \
+        ::mx::deserialize(ba, offset, packed); \
+        mx_unpack_bits(packed); \
+    }
+
+#define MX_BITFIELDS_U16(...) \
+    uint16_t mx_pack_bits() const { \
+        return ::mx::detail::packBitsU16(__VA_ARGS__); \
+    } \
+    void mx_unpack_bits(uint16_t packed) { \
+        MX_BF_UNPACK(packed, __VA_ARGS__); \
+    } \
+    void mx_to_net_bitfields() { \
+        uint16_t packed = mx_pack_bits(); \
+        packed = qToBigEndian(packed); \
+        mx_unpack_bits(packed); \
+    } \
+    void mx_to_host_bitfields() { \
+        uint16_t packed = mx_pack_bits(); \
+        packed = qFromBigEndian(packed); \
+        mx_unpack_bits(packed); \
+    } \
+    void serializeFields(QByteArray &ba) const { \
+        ::mx::serialize(ba, mx_pack_bits()); \
+    } \
+    void deserializeFields(const QByteArray &ba, int &offset) { \
+        uint16_t packed{}; \
+        ::mx::deserialize(ba, offset, packed); \
+        mx_unpack_bits(packed); \
+    }
 
 // --------------------------- 包含实现 ---------------------------
 #include "mx/detail/FieldSerializer_impl.h"
