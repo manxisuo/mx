@@ -6,7 +6,7 @@
 - 字段序列化 / 反序列化到 `QByteArray`；
 - 基于 `QDataStream` 的序列化辅助；
 - 字节转换与 BCD 转换辅助；
-- 位域结构体的跨平台安全打包（`MX_BITFIELDS_U8` / `MX_BITFIELDS_U16`）。
+- 位域结构体的跨平台安全打包（`MX_BITFIELDS_U8` / `U16`，以及混合字段 `MX_MIXED_FIELDS_U8` / `U16`）。
 
 库支持常见的 Qt 类型，例如 `QString`、`QList` 和 `QVector`。
 
@@ -124,6 +124,21 @@ C++ 位域的内存布局是实现定义的，不能直接 `memcpy` 做跨平台
 - 第 1 个参数 → bit1
 - ……
 
+仅位域：
+
+```cpp
+struct Flags
+{
+    unsigned char b0:1;
+    // ...
+    unsigned char b7:1;
+
+    MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
+};
+```
+
+位域 + 普通字段，使用 `MX_MIXED_FIELDS_U8` / `U16`（位域列表需加括号）：
+
 ```cpp
 #include <mx/FieldSerializer.h>
 #include <mx/ByteOrder.h>
@@ -138,8 +153,10 @@ struct AState
     unsigned char b5:1;
     unsigned char b6:1;
     unsigned char b7:1;
+    uint16_t length{};
 
-    MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
+    MX_MIXED_FIELDS_U8((b0, b1, b2, b3, b4, b5, b6, b7), length)
+    MX_BYTEODER(AState, length)  // 只列普通字段
 };
 
 struct Device
@@ -153,7 +170,7 @@ struct Device
 };
 ```
 
-不要对 `b0`…`b7` 使用 `MX_FIELDS` / `MX_BYTEODER`。`U8` 无字节序问题；`U16` 在 `toNetOrder` / `toHostOrder` 时会对打包后的 `uint16_t` 做端序转换。
+线格式顺序：先写入打包后的位域整数，再按参数顺序写入普通字段。不要对 `b0`…`b7` 使用 `MX_FIELDS` / `MX_BYTEODER`。`U8` 位域无字节序问题；`U16` 位域与普通整数字段都会在 `toNetOrder` / `toHostOrder` 时转换。
 
 ## 构建示例与测试
 

@@ -16,8 +16,10 @@ struct AState
     unsigned char b5 : 1;
     unsigned char b6 : 1;
     unsigned char b7 : 1;
+    uint16_t length{};
 
-    MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
+    MX_MIXED_FIELDS_U8((b0, b1, b2, b3, b4, b5, b6, b7), length)
+    MX_BYTEODER(AState, length)
 };
 
 struct Item
@@ -52,6 +54,7 @@ int main()
     packet.state.b5 = 0;
     packet.state.b6 = 0;
     packet.state.b7 = 1;
+    packet.state.length = 0x55AA;
 
     const Packet net = mx::toNetOrder(packet);
     const Packet host = mx::toHostOrder(net);
@@ -65,6 +68,7 @@ int main()
     if (decoded.items[0].name != packet.items[0].name) return 4;
     if (mx::fromNet(mx::toNet(static_cast<uint32_t>(0x12345678))) != 0x12345678) return 5;
     if (decoded.state.mx_pack_bits() != 0x81) return 6;
+    if (decoded.state.length != packet.state.length) return 7;
 
     return 0;
 }

@@ -166,6 +166,9 @@ template<typename T>
 void convertNetOrder(T& v) {
     if constexpr (has_asTuple<T>::value) {
         v = toNetOrderStruct(v);
+        if constexpr (has_mx_bitfields_convert<T>::value) {
+            v.mx_to_net_bitfields();
+        }
     }
     else if constexpr (has_mx_bitfields_convert<T>::value) {
         v.mx_to_net_bitfields();
@@ -189,6 +192,9 @@ template<typename T>
 void convertHostOrder(T& v) {
     if constexpr (has_asTuple<T>::value) {
         v = toHostOrderStruct(v);
+        if constexpr (has_mx_bitfields_convert<T>::value) {
+            v.mx_to_host_bitfields();
+        }
     }
     else if constexpr (has_mx_bitfields_convert<T>::value) {
         v.mx_to_host_bitfields();

@@ -142,12 +142,16 @@ void serializeFields(QByteArray &ba) const { \
 // --------------------------- MX_BITFIELDS（跨平台安全位域打包） ---------------------------
 // 将 C++ 位域按参数顺序显式打包为整数后再序列化，不依赖编译器位域内存布局。
 // 约定：第 0 个字段 → bit0，第 1 个 → bit1，以此类推。
-// 用法（写在位域结构体内部，不要对各位使用 MX_FIELDS / MX_BYTEODER）：
-//   struct AState {
-//       unsigned char b0:1, b1:1, b2:1, b3:1, b4:1, b5:1, b6:1, b7:1;
-//       MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
-//   };
+//
+// 仅位域：
+//   MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
+//
+// 位域 + 普通字段（BITLIST 需加括号；随后为可 tie 的普通字段）：
+//   MX_MIXED_FIELDS_U8((b0, b1, b2, b3, b4, b5, b6, b7), length)
+//   MX_BYTEODER(Type, length)   // 只列普通字段；位域由 mx_to_*_bitfields 处理
 #include "mx/detail/BitFields_Impl.h"
+
+#define MX_EXPAND(...) __VA_ARGS__
 
 #define MX_BITFIELDS_U8(...) \
     uint8_t mx_pack_bits() const { \
@@ -191,6 +195,59 @@ void serializeFields(QByteArray &ba) const { \
         uint16_t packed{}; \
         ::mx::deserialize(ba, offset, packed); \
         mx_unpack_bits(packed); \
+    }
+
+// BITLIST 形如 (b0, b1, ...)；其余参数为普通字段，按声明顺序紧跟在打包整数之后序列化。
+#define MX_MIXED_FIELDS_U8(BITLIST, ...) \
+    uint8_t mx_pack_bits() const { \
+        return ::mx::detail::packBitsU8 BITLIST; \
+    } \
+    void mx_unpack_bits(uint8_t packed) { \
+        MX_BF_UNPACK(packed, MX_EXPAND BITLIST); \
+    } \
+    void mx_to_net_bitfields() {} \
+    void mx_to_host_bitfields() {} \
+    void serializeFields(QByteArray &ba) const { \
+        ::mx::serialize(ba, mx_pack_bits()); \
+        auto tpl = std::tie(__VA_ARGS__); \
+        std::apply([&](auto&... args){ ((mx::serialize(ba, args)), ...); }, tpl); \
+    } \
+    void deserializeFields(const QByteArray &ba, int &offset) { \
+        uint8_t packed{}; \
+        ::mx::deserialize(ba, offset, packed); \
+        mx_unpack_bits(packed); \
+        auto tpl = std::tie(__VA_ARGS__); \
+        std::apply([&](auto&... args){ ((mx::deserialize(ba, offset, args)), ...); }, tpl); \
+    }
+
+#define MX_MIXED_FIELDS_U16(BITLIST, ...) \
+    uint16_t mx_pack_bits() const { \
+        return ::mx::detail::packBitsU16 BITLIST; \
+    } \
+    void mx_unpack_bits(uint16_t packed) { \
+        MX_BF_UNPACK(packed, MX_EXPAND BITLIST); \
+    } \
+    void mx_to_net_bitfields() { \
+        uint16_t packed = mx_pack_bits(); \
+        packed = qToBigEndian(packed); \
+        mx_unpack_bits(packed); \
+    } \
+    void mx_to_host_bitfields() { \
+        uint16_t packed = mx_pack_bits(); \
+        packed = qFromBigEndian(packed); \
+        mx_unpack_bits(packed); \
+    } \
+    void serializeFields(QByteArray &ba) const { \
+        ::mx::serialize(ba, mx_pack_bits()); \
+        auto tpl = std::tie(__VA_ARGS__); \
+        std::apply([&](auto&... args){ ((mx::serialize(ba, args)), ...); }, tpl); \
+    } \
+    void deserializeFields(const QByteArray &ba, int &offset) { \
+        uint16_t packed{}; \
+        ::mx::deserialize(ba, offset, packed); \
+        mx_unpack_bits(packed); \
+        auto tpl = std::tie(__VA_ARGS__); \
+        std::apply([&](auto&... args){ ((mx::deserialize(ba, offset, args)), ...); }, tpl); \
     }
 
 // --------------------------- 包含实现 ---------------------------

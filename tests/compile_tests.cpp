@@ -17,8 +17,10 @@ struct AState
     unsigned char b5 : 1;
     unsigned char b6 : 1;
     unsigned char b7 : 1;
+    uint16_t length{};
 
-    MX_BITFIELDS_U8(b0, b1, b2, b3, b4, b5, b6, b7)
+    MX_MIXED_FIELDS_U8((b0, b1, b2, b3, b4, b5, b6, b7), length)
+    MX_BYTEODER(AState, length)
 };
 
 struct Flags16
@@ -86,6 +88,7 @@ int main()
     value.state.b5 = 0;
     value.state.b6 = 0;
     value.state.b7 = 1;
+    value.state.length = 0x1234;
     value.flags.f0 = 1;
     value.flags.f1 = 0;
     value.flags.f2 = 0;
@@ -114,6 +117,7 @@ int main()
     if (host.vectorLeaves.size() != value.vectorLeaves.size()) return 6;
     if (host.leafArray[1].id != value.leafArray[1].id) return 7;
     if (host.state.b0 != 1 || host.state.b3 != 1 || host.state.b7 != 1) return 12;
+    if (host.state.length != value.state.length) return 20;
     if (host.flags.f0 != 1 || host.flags.f8 != 1 || host.flags.f15 != 1) return 13;
 
     const QByteArray bytes = mx::toByteArray(value);
@@ -121,9 +125,10 @@ int main()
     if (decoded.count != value.count) return 8;
     if (decoded.leaves[0].name != value.leaves[0].name) return 9;
     if (decoded.state.mx_pack_bits() != value.state.mx_pack_bits()) return 14;
+    if (decoded.state.length != value.state.length) return 21;
     if (decoded.flags.mx_pack_bits() != value.flags.mx_pack_bits()) return 15;
 
-    // 协议布局：AState 固定写 1 字节，Flags16 固定写 2 字节（宿主字节序下的打包整数）
+    // 协议布局：混合字段先写 1 字节位域，再写 length
     AState alone{};
     alone.b0 = 1;
     alone.b1 = 1;
@@ -134,9 +139,13 @@ int main()
     alone.b5 = 0;
     alone.b6 = 0;
     alone.b7 = 0;
+    alone.length = 0xABCD;
     const QByteArray stateBytes = mx::toByteArray(alone);
-    if (stateBytes.size() != 1) return 16;
+    if (stateBytes.size() != 1 + static_cast<int>(sizeof(uint16_t))) return 16;
     if (static_cast<uint8_t>(stateBytes.at(0)) != 0x03) return 17;
+    const AState aloneDecoded = mx::fromByteArray<AState>(stateBytes);
+    if (aloneDecoded.length != alone.length) return 22;
+    if (aloneDecoded.mx_pack_bits() != 0x03) return 23;
 
     Flags16 alone16{};
     alone16.f0 = 1;
